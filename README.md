@@ -1,2 +1,2 @@
-# cs50_final_project
-The final project for CS50x.
+# Final Project For CS50x
+## Project outline: 
