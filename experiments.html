@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% block title %}Experiments — Emergence{% endblock %}
+
+{% block content %}
+<header class="hero">
+    <h1>Experiment log</h1>
+    <p class="subtitle">Saved snapshots from your simulations. Compare how different parameters affect language emergence.</p>
+</header>
+
+{% if experiments %}
+<div class="exp-table-wrap">
+    <table class="exp-table">
+        <thead>
+            <tr>
+                <th>Name</th><th>Time</th><th>Gen</th><th>Consensus</th>
+                <th>Entropy</th><th>Signals</th><th>Dominant</th>
+                <th>Food</th><th>Notes</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in experiments %}
+            <tr>
+                <td class="exp-name">{{ e.name }}</td>
+                <td class="exp-time">{{ e.timestamp[:16] }}</td>
+                <td>{{ e.generation }}</td>
+                <td><span class="exp-con {{ 'high' if e.consensus >= 70 else ('mid' if e.consensus >= 40 else '') }}">{{ "%.0f"|format(e.consensus) }}%</span></td>
+                <td>{{ "%.2f"|format(e.entropy) }}</td>
+                <td>{{ e.active_signals }}/10</td>
+                <td>{% if e.dominant_signal >= 0 %}<span class="sig-badge sig-{{ e.dominant_signal }}">{{ e.dominant_signal }}</span>{% else %}—{% endif %}</td>
+                <td>{{ e.total_food }}</td>
+                <td class="exp-notes-cell">{{ e.notes or "—" }}</td>
+                <td><button class="btn btn-small btn-danger" onclick="deleteExp({{ e.id }},this)">×</button></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No experiments saved yet.</p>
+    <p>Run a simulation and save it from the <a href="/">simulation page</a>.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function deleteExp(id,btn){
+    if(!confirm("Delete this experiment?"))return;
+    const r=await fetch("/api/experiments/"+id,{method:"DELETE"});
+    if(r.ok)btn.closest("tr").remove();
+}
+</script>
+{% endblock %}
