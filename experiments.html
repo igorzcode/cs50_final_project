@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% block title %}Experiments{% endblock %}
+
+{% block content %}
+<header class="hero">
+    <h1>Experiment log</h1>
+    <p class="subtitle">Saved snapshots from your simulations. Click a name to see full analysis, or load its parameters back into the simulation.</p>
+</header>
+
+{% if summary and summary.total_experiments > 0 %}
+<div class="summary-bar">
+    <div class="metric-item"><div class="metric-val">{{ summary.total_experiments }}</div><div class="metric-lbl">Experiments</div></div>
+    <div class="metric-item"><div class="metric-val">{{ summary.avg_consensus or 0 }}%</div><div class="metric-lbl">Avg consensus</div></div>
+    <div class="metric-item"><div class="metric-val">{{ summary.best_consensus or 0 }}%</div><div class="metric-lbl">Best consensus</div></div>
+    <div class="metric-item"><div class="metric-val">{{ summary.avg_food|int }}</div><div class="metric-lbl">Avg food found</div></div>
+</div>
+{% endif %}
+
+{% if experiments %}
+<div class="exp-table-wrap">
+    <table class="exp-table">
+        <thead>
+            <tr>
+                <th>Name</th><th>Time</th><th>Gen</th><th>Consensus</th>
+                <th>Peak</th><th>Entropy</th><th>Dominant</th>
+                <th>Readings</th><th>Notes</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in experiments %}
+            <tr>
+                <td class="exp-name"><a href="/experiments/{{ e.id }}">{{ e.name }}</a></td>
+                <td class="exp-time">{{ e.timestamp[:16] }}</td>
+                <td>{{ e.generation }}</td>
+                <td><span class="exp-con {{ 'high' if e.consensus >= 70 else ('mid' if e.consensus >= 40 else '') }}">{{ "%.0f"|format(e.consensus) }}%</span></td>
+                <td>{{ e.peak_consensus or "—" }}%</td>
+                <td>{{ "%.2f"|format(e.entropy) }}</td>
+                <td>{% if e.dominant_signal >= 0 %}<span class="sig-badge sig-{{ e.dominant_signal }}">{{ e.dominant_signal }}</span>{% else %}—{% endif %}</td>
+                <td>{{ e.snapshot_count }}</td>
+                <td class="exp-notes-cell">{{ e.notes or "—" }}</td>
+                <td class="exp-actions">
+                    <a href="/" class="btn btn-small" onclick="localStorage.setItem('loadExp','{{ e.id }}')">Load</a>
+                    <button class="btn btn-small btn-danger" onclick="deleteExp({{ e.id }},this)">×</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No experiments saved yet.</p>
+    <p>Run a simulation and save it from the <a href="/">simulation page</a>.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function deleteExp(id, btn) {
+    if (!confirm("Delete this experiment?")) return;
+    let response = await fetch("/api/experiments/" + id, { method: "DELETE" });
+    if (response.ok) btn.closest("tr").remove();
+}
+</script>
+{% endblock %}

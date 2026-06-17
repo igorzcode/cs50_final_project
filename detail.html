@@ -1,0 +1,128 @@
+{% extends "layout.html" %}
+{% block title %}{{ experiment.name }}{% endblock %}
+
+{% block content %}
+<header class="hero">
+    <h1>{{ experiment.name }}</h1>
+    <p class="subtitle">Saved {{ experiment.timestamp[:16] }} · Generation {{ experiment.generation }} · {{ experiment.total_food }} food found</p>
+</header>
+
+<div class="detail-grid">
+    <div class="card">
+        <div class="card-header">Final state</div>
+        <div class="detail-metrics">
+            <div class="metric-item">
+                <div class="metric-val">
+                    <span class="exp-con {{ 'high' if experiment.consensus >= 70 else ('mid' if experiment.consensus >= 40 else '') }}">
+                        {{ "%.0f"|format(experiment.consensus) }}%
+                    </span>
+                </div>
+                <div class="metric-lbl">Consensus</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-val">{{ "%.2f"|format(experiment.entropy) }}</div>
+                <div class="metric-lbl">Entropy</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-val">{{ experiment.active_signals }}/10</div>
+                <div class="metric-lbl">Active signals</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-val">
+                    {% if experiment.dominant_signal >= 0 %}
+                        <span class="sig-badge sig-{{ experiment.dominant_signal }}">{{ experiment.dominant_signal }}</span>
+                    {% else %}—{% endif %}
+                </div>
+                <div class="metric-lbl">Dominant signal</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Analysis</div>
+        <div class="detail-metrics">
+            <div class="metric-item">
+                <div class="metric-val">{{ analysis.convergence_tick if analysis.convergence_tick else "Never" }}</div>
+                <div class="metric-lbl">Convergence tick</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-val">{{ analysis.stability if analysis.stability is not none else "—" }}</div>
+                <div class="metric-lbl">Stability (std dev)</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-val">{{ (analysis.efficiency_gain|string + "%") if analysis.efficiency_gain is not none else "—" }}</div>
+                <div class="metric-lbl">Efficiency gain</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-val">{{ analysis.total_snapshots }}</div>
+                <div class="metric-lbl">Data points</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if snapshots %}
+<div class="graph-card" style="margin-top: 16px;">
+    <div class="graph-title">Timeline: consensus and entropy</div>
+    <canvas id="detail-graph" width="800" height="200"></canvas>
+    <div class="graph-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#6c5ce7"></span>Consensus %</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#fdcb6e"></span>Entropy</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#00b894"></span>Find rate</span>
+    </div>
+</div>
+{% endif %}
+
+{% if experiment.notes %}
+<div class="card" style="margin-top: 16px;">
+    <div class="card-header">Notes</div>
+    <p style="font-size: 14px; color: var(--txt2); line-height: 1.6;">{{ experiment.notes }}</p>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 16px;">
+    <div class="card-header">Parameters</div>
+    <pre class="param-display">{{ experiment.parameters }}</pre>
+</div>
+
+<div class="btn-row" style="margin-top: 16px;">
+    <a href="/" class="btn btn-accent" onclick="localStorage.setItem('loadExp','{{ experiment.id }}')">Load these parameters into simulation</a>
+    <a href="/experiments" class="btn">Back to experiments</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if snapshots %}
+<script>
+    let snapshots = {{ snapshots_json|tojson }};
+    let canvas = document.getElementById("detail-graph");
+    let ctx = canvas.getContext("2d");
+    let W = canvas.width, H = canvas.height;
+
+    ctx.strokeStyle = "rgba(0,0,0,0.05)";
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+        let y = (H * i) / 4;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    function drawLine(key, color, scale) {
+        if (snapshots.length < 2) return;
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        for (let i = 0; i < snapshots.length; i++) {
+            let x = (i / (snapshots.length - 1)) * W;
+            let y = H - (snapshots[i][key] / scale) * H * 0.85 - H * 0.07;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+
+    drawLine("consensus", "#6c5ce7", 100);
+    drawLine("entropy", "#fdcb6e", Math.log2(10));
+    drawLine("find_rate", "#00b894", Math.max(1, ...snapshots.map(function(s) { return s.find_rate; })));
+</script>
+{% endif %}
+{% endblock %}

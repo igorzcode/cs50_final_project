@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+{% block title %}Emergence{% endblock %}
+
+{% block content %}
+<header class="hero">
+    <h1>How does a word get invented?</h1>
+    <p class="subtitle">Agents make sounds but have no language. Food grows in clusters. They call out, but no sound <em>means</em> anything yet. Watch meaning emerge from noise.</p>
+</header>
+
+<div class="sim-layout">
+    <section class="sim-world">
+        <canvas id="world" width="500" height="500"></canvas>
+        <div class="world-footer">
+            <span class="state-dot state-wander"></span> Wandering
+            <span class="state-dot state-food"></span> Found food
+            <span class="state-dot state-signal"></span> Following signal
+            <span class="state-dot state-hotspot"></span> Food hotspot
+        </div>
+    </section>
+
+    <aside class="sim-panel">
+        <div class="card card-language">
+            <div class="card-header">Language state</div>
+            <div id="con-word" class="consensus-label">Listening...</div>
+            <div id="gen-label" class="gen-label">Generation 0</div>
+            <div class="bar-wrap" id="bars"></div>
+            <div class="bar-labels" id="bar-labels"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">How agents learn</div>
+            <div class="control-row"><label for="r-lr">Learning rate</label><input type="range" id="r-lr" min="0.02" max="0.5" step="0.01" value="0.18"><span id="v-lr" class="val">0.18</span></div>
+            <div class="control-row"><label for="r-decay">Memory decay</label><input type="range" id="r-decay" min="0" max="0.01" step="0.001" value="0.002"><span id="v-decay" class="val">.002</span></div>
+            <div class="control-row"><label for="r-conf">Conformity</label><input type="range" id="r-conf" min="0" max="1" step="0.05" value="0.35"><span id="v-conf" class="val">0.35</span></div>
+            <div class="control-row"><label for="r-range">Hearing range</label><input type="range" id="r-range" min="20" max="160" step="1" value="75"><span id="v-range" class="val">75</span></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">How language mutates</div>
+            <div class="control-row"><label for="r-iso">Isolation drift</label><input type="range" id="r-iso" min="0" max="0.05" step="0.002" value="0.012"><span id="v-iso" class="val">.012</span></div>
+            <div class="control-row"><label for="r-rebel">Youth rebellion</label><input type="range" id="r-rebel" min="0" max="0.08" step="0.002" value="0.02"><span id="v-rebel" class="val">.020</span></div>
+            <div class="control-row"><label for="r-cerr">Mishearing</label><input type="range" id="r-cerr" min="0" max="0.05" step="0.002" value="0.008"><span id="v-cerr" class="val">.008</span></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">World</div>
+            <div class="control-row"><label for="r-pop">Population</label><input type="range" id="r-pop" min="10" max="150" step="1" value="50"><span id="v-pop" class="val">50</span></div>
+            <div class="control-row"><label for="r-spots">Hotspots</label><input type="range" id="r-spots" min="1" max="10" step="1" value="4"><span id="v-spots" class="val">4</span></div>
+            <div class="control-row"><label for="r-spd">Sim speed</label><input type="range" id="r-spd" min="1" max="20" step="1" value="5"><span id="v-spd" class="val">5</span></div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn" id="btn-pause" onclick="togglePause()">⏸ Pause</button>
+            <button class="btn" onclick="resetAll()">Reset</button>
+            <button class="btn btn-accent" onclick="babel()">Babel event</button>
+        </div>
+    </aside>
+</div>
+
+<div class="metrics-bar">
+    <div class="metric-item"><div class="metric-val" id="m-con">0%</div><div class="metric-lbl">Consensus</div></div>
+    <div class="metric-item"><div class="metric-val" id="m-vocab">—</div><div class="metric-lbl">Active signals</div></div>
+    <div class="metric-item"><div class="metric-val" id="m-eff">—</div><div class="metric-lbl">Find rate</div></div>
+    <div class="metric-item"><div class="metric-val" id="m-ent">—</div><div class="metric-lbl">Entropy</div></div>
+    <div class="metric-item"><div class="metric-val" id="m-fed">0</div><div class="metric-lbl">Food found</div></div>
+</div>
+
+<div class="graphs-row">
+    <div class="graph-card">
+        <div class="graph-title">Consensus and efficiency over time</div>
+        <canvas id="g-con" width="500" height="140"></canvas>
+        <div class="graph-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:#6c5ce7"></span>Consensus %</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#00b894"></span>Find rate</span>
+        </div>
+    </div>
+    <div class="graph-card">
+        <div class="graph-title">Entropy and vocabulary diversity</div>
+        <canvas id="g-ent" width="500" height="140"></canvas>
+        <div class="graph-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:#fdcb6e"></span>Entropy</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#e17055"></span>Active signals</span>
+        </div>
+    </div>
+</div>
+
+<div class="save-bar">
+    <input type="text" id="exp-name" class="save-input" placeholder="Name this experiment..." maxlength="200" required>
+    <textarea id="exp-notes" class="save-input save-notes" placeholder="Notes (what did you observe?)" maxlength="2000"></textarea>
+    <button class="btn btn-save" onclick="saveExperiment()">Save experiment</button>
+    <span id="save-status" class="save-status"></span>
+</div>
+
+<section class="theory">
+    <h2>What you are seeing</h2>
+    <div class="theory-grid">
+        <div class="theory-item">
+            <h3>The setup</h3>
+            <p>Each agent emits one of 10 possible sounds and holds beliefs about what each sound means. Initially these are random. No sound carries meaning. Food grows in clusters that deplete and reappear elsewhere.</p>
+        </div>
+        <div class="theory-item">
+            <h3>The feedback loop</h3>
+            <p>When an agent finds food, it calls out. Nearby agents hear, walk toward the hotspot, and find food too. They reinforce that belief: <em>that sound means food</em>. Useful sounds spread. Useless ones fade.</p>
+        </div>
+        <div class="theory-item">
+            <h3>The emergence</h3>
+            <p>Over time, one sound statistically wins. The population converges on a shared signal without any agent knowing it is building a language. Meaning emerges from reinforcement, not design.</p>
+        </div>
+        <div class="theory-item">
+            <h3>The mutations</h3>
+            <p>Three forces resist consensus: isolated agents drift to new sounds, young agents experiment, and signals get slightly miscopied. These mirror real linguistic processes: dialect, slang, and phonetic shift.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/simulation.js') }}"></script>
+{% endblock %}
